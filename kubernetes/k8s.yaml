@@ -1,0 +1,148 @@
+heat_template_version: queens
+
+description: >
+  Heat template to deploy servers for a Kubernetes cluster
+
+parameters:
+
+  num_masters:
+    type: number
+    description: Number of Kubernetes master servers to create
+    default: 1
+    constraints:
+      - range: { min: 1, max: 10 }
+
+  num_nodes:
+    type: number
+    description: Number of Kubernetes worker node servers to create
+    default: 3
+    constraints:
+      - range: { min: 1, max: 20 }
+
+  num_node_volumes:
+    type: number
+    description: Number of volumes to create for each Kubernetes worker node server
+    default: 0
+    constraints:
+      - range: { min: 0, max: 20 }
+
+  node_volume_size:
+    type: number
+    description: Size of the Kubernetes worker node volume in GB
+    default: 20
+    constraints:
+      - range: { min: 1, max: 1024 }
+        description: must be between 1 and 1024 GB
+
+  server_name_prefix:
+    type: string
+    description: The prefix to use for the server names
+    default: k8s
+
+  key_name:
+    type: string
+    description: Name of a KeyPair for SSH access to the server
+
+  master_flavor:
+    type: string
+    description: Kubernetes master server flavor
+    default: m1.medium
+
+  node_flavor:
+    type: string
+    description: Kubernetes worker node server flavor
+    default: m1.large
+
+  image_id:
+    type: string
+    description: Name or ID of the image to use for the servers
+    default: Ubuntu 18.04 LTS x86_64
+
+  management_net:
+    type: string
+    description: Name of the project's mangement network
+    default: kcoakley_network
+
+  availability_zone:
+    type: string
+    description: The availability zone used to create the resources
+    default: West-Datacenter
+
+resources:
+
+  ssh_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: ssh_security_group
+      description: Port 22 for SSH
+      rules:
+      - protocol: tcp
+        port_range_min: 22
+        port_range_max: 22
+
+  k8s_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: k8s_security_group
+      description: For services ceph-mon, ceph-mgr and ceph-mgr dashboard
+      rules:
+        - protocol: tcp
+          port_range_min: 1
+          port_range_max: 65535
+        - protocol: udp
+          port_range_min: 1
+          port_range_max: 65535
+
+  k8s_master:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: num_masters }
+      resource_def:
+        type: k8s_master_server.yaml
+        properties:
+          index: "%index%"
+          server_name_prefix: { get_param: server_name_prefix }
+          image_id: { get_param: image_id }
+          flavor: { get_param: master_flavor }
+          key_name: { get_param: key_name }
+          management_net: { get_param: management_net }
+          ssh_security_group: { get_resource: ssh_security_group }
+          k8s_security_group: { get_resource: k8s_security_group }
+
+  k8s_node:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: num_nodes }
+      resource_def:
+        type: k8s_node_server.yaml
+        properties:
+          index: "%index%"
+          server_name_prefix: { get_param: server_name_prefix }
+          image_id: { get_param: image_id }
+          flavor: { get_param: node_flavor }
+          key_name: { get_param: key_name }
+          management_net: { get_param: management_net }
+          ssh_security_group: { get_resource: ssh_security_group }
+          k8s_security_group: { get_resource: k8s_security_group }
+          num_node_volumes: { get_param: num_node_volumes }
+          node_volume_size: { get_param: node_volume_size }
+          availability_zone: { get_param: availability_zone }
+
+
+outputs:
+
+  k8s_master_server_names:
+    description: Kubernetes master server names
+    value: { get_attr: [k8s_master, k8s_master_server_name] }
+
+  k8s_master_management_addresses:
+    description: Kubernetes master management addresses
+    value: { get_attr: [k8s_master, k8s_master_management_address] }
+
+  k8s_node_server_names:
+    description: Kubernetes worker node server names
+    value: { get_attr: [k8s_node, k8s_node_server_name] }
+
+  k8s_node_management_addresses:
+    description: Kubernetes worker node management addresses
+    value: { get_attr: [k8s_node, k8s_node_management_address] }

@@ -1,0 +1,31 @@
+heat_template_version: queens
+
+parameters:
+
+  size:
+    type: number
+    description: Size of the OSD volume in GB
+
+  availability_zone:
+    type: string
+    description: The availability zone used to create the volume
+
+  instance_uuid:
+    type: string
+    description: The uuid of the server the volume is being attached to
+
+
+resources:
+
+  osd_volume:
+    type: OS::Cinder::Volume
+    properties:
+      size: { get_param: size }
+      availability_zone: { get_param: availability_zone }
+
+
+  osd_volume_attachment:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      volume_id: { get_resource: osd_volume }
+      instance_uuid: { get_param: instance_uuid }

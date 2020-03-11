@@ -1,0 +1,225 @@
+heat_template_version: queens
+
+description: >
+  Heat template to deploy servers and networks for a Ceph cluster
+
+parameters:
+
+  num_mons:
+    type: number
+    description: Number of Ceph monitor servers to create
+    default: 3
+    constraints:
+      - range: { min: 1, max: 10 }
+
+  num_osds:
+    type: number
+    description: Number of Ceph OSD servers to create
+    default: 3
+    constraints:
+      - range: { min: 1, max: 20 }
+
+  num_osd_volumes:
+    type: number
+    description: Number of volumes to create for each Ceph OSD server
+    default: 5
+    constraints:
+      - range: { min: 1, max: 20 }
+
+  osd_volume_size:
+    type: number
+    description: Size of the Ceph OSD volume in GB
+    default: 20
+    constraints:
+      - range: { min: 1, max: 1024 }
+        description: must be between 1 and 1024 GB
+
+  server_name_prefix:
+    type: string
+    description: The prefix to use for the server name
+    default: ceph
+
+  key_name:
+    type: string
+    description: Name of a KeyPair for SSH access to the server
+
+  mon_flavor:
+    type: string
+    description: Ceph monitor server flavor
+    default: m1.medium
+
+  osd_flavor:
+    type: string
+    description: Ceph OSD server flavor
+    default: m1.large
+
+  image_id:
+    type: string
+    description: Name or ID of the image to use for the servers
+    default: CentOS 7.6 x86_64
+
+  management_net:
+    type: string
+    description: Name of the project's mangement network
+    default: kcoakley_network
+
+  public_net_cidr:
+    type: string
+    description: Public network address (CIDR notation)
+    default: 10.0.1.0/24
+
+  cluster_net_cidr:
+    type: string
+    description: Cluster network address (CIDR notation)
+    default: 10.0.2.0/24
+
+  dns_servers:
+    type: comma_delimited_list
+    description: DNS servers for Ceph networks
+    default: ["198.202.75.26", "132.249.20.25"]
+
+  availability_zone:
+    type: string
+    description: The availability zone used to create the resources
+    default: West-Datacenter
+
+resources:
+
+  public_net:
+    type: OS::Neutron::Net
+    properties:
+      name:
+        str_replace:
+          template: prefix_public
+          params:
+            prefix: { get_param: server_name_prefix }
+
+  public_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      network_id: { get_resource: public_net }
+      cidr: { get_param: public_net_cidr }
+      dns_nameservers: { get_param: dns_servers }
+
+  cluster_net:
+    type: OS::Neutron::Net
+    properties:
+      name:
+        str_replace:
+          template: prefix_cluster
+          params:
+            prefix: { get_param: server_name_prefix }
+
+  cluster_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      network_id: { get_resource: cluster_net }
+      cidr: { get_param: cluster_net_cidr }
+      dns_nameservers: { get_param: dns_servers }
+
+  ssh_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: ssh_security_group
+      description: Port 22 for SSH
+      rules:
+      - protocol: tcp
+        port_range_min: 22
+        port_range_max: 22
+
+  ceph_mon_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: ceph_mon_security_group
+      description: For services ceph-mon, ceph-mgr and ceph-mgr dashboard
+      rules:
+        - protocol: tcp
+          port_range_min: 3300
+          port_range_max: 3300
+        - protocol: tcp
+          port_range_min: 6789
+          port_range_max: 6789
+        - protocol: tcp
+          port_range_min: 6800
+          port_range_max: 6800
+        - protocol: tcp
+          port_range_min: 7000
+          port_range_max: 7000
+
+  ceph_osd_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: ceph_osd_security_group
+      description: For services ceph-osd
+      rules:
+        - protocol: tcp
+          port_range_min: 6800
+          port_range_max: 7300
+
+  ceph_rgws_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: ceph_rgws_security_group
+      description: For services Ceph object gateway
+      rules:
+        - protocol: tcp
+          port_range_min: 8080
+          port_range_max: 8080
+
+  ceph_mon:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: num_mons }
+      resource_def:
+        type: ceph_mon_server.yaml
+        properties:
+          index: "%index%"
+          server_name_prefix: { get_param: server_name_prefix }
+          image_id: { get_param: image_id }
+          flavor: { get_param: mon_flavor }
+          key_name: { get_param: key_name }
+          management_net: { get_param: management_net }
+          public_net: { get_resource: public_net }
+          ssh_security_group: { get_resource: ssh_security_group }
+          ceph_mon_security_group: { get_resource: ceph_mon_security_group }
+          ceph_rgws_security_group: { get_resource: ceph_rgws_security_group }
+
+  ceph_osd:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: num_osds }
+      resource_def:
+        type: ceph_osd_server.yaml
+        properties:
+          index: "%index%"
+          server_name_prefix: { get_param: server_name_prefix }
+          image_id: { get_param: image_id }
+          flavor: { get_param: osd_flavor }
+          key_name: { get_param: key_name }
+          management_net: { get_param: management_net }
+          public_net: { get_resource: public_net }
+          cluster_net: { get_resource: cluster_net }
+          ssh_security_group: { get_resource: ssh_security_group }
+          ceph_osd_security_group: { get_resource: ceph_osd_security_group }
+          num_osd_volumes: { get_param: num_osd_volumes }
+          osd_volume_size: { get_param: osd_volume_size }
+          availability_zone: { get_param: availability_zone }
+
+
+outputs:
+
+  ceph_mon_server_names:
+    description: Ceph mon server names
+    value: { get_attr: [ceph_mon, ceph_mon_server_name] }
+
+  ceph_mon_management_addresses:
+    description: Ceph mon management addresses
+    value: { get_attr: [ceph_mon, ceph_mon_management_address] }
+
+  ceph_osd_server_names:
+    description: Ceph osd server names
+    value: { get_attr: [ceph_osd, ceph_osd_server_name] }
+
+  ceph_osd_management_addresses:
+    description: Ceph osd management addresses
+    value: { get_attr: [ceph_osd, ceph_osd_management_address] }

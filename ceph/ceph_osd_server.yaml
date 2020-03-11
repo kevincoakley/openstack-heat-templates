@@ -1,0 +1,133 @@
+heat_template_version: queens
+
+parameters:
+
+  index:
+    type: number
+    description: Index of the ceph_osd OS::Heat::ResourceGroup itteration
+
+  server_name_prefix:
+    type: string
+    description: The prefix to use for the server name
+
+  key_name:
+    type: string
+    description: Name of a KeyPair to enable SSH access to the server
+
+  flavor:
+    type: string
+    description: Instance type for the server
+
+  image_id:
+    type: string
+    description: Name or ID of the image to use for the server
+
+  management_net:
+    type: string
+    description: Name of the project's mangement network
+
+  public_net:
+    type: string
+    description: Name or ID of the Ceph public network
+
+  cluster_net:
+    type: string
+    description: Name or ID of the Ceph cluster network
+
+  ssh_security_group:
+    type: string
+    description: Name or ID of the SSH security group
+
+  ceph_osd_security_group:
+    type: string
+    description: Name or ID of the Ceph OSD security group
+
+  num_osd_volumes:
+    type: number
+    description: Number of volumes to create for each Ceph OSD server
+
+  osd_volume_size:
+    type: number
+    description: Size of the OSD volume in GB
+
+  availability_zone:
+    type: string
+    description: The availability zone used to create the resources
+
+
+resources:
+
+  ceph_osd_server:
+    type: OS::Nova::Server
+    properties:
+      name:
+        str_replace:
+          template: prefix-osd-index
+          params:
+            prefix: { get_param: server_name_prefix }
+            index: { get_param: index }
+      image: { get_param: image_id }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key_name }
+      networks:
+        - network: { get_param: management_net }
+        - network: { get_param: public_net }
+        - network: { get_param: cluster_net }
+      security_groups:
+        - { get_param: ssh_security_group }
+        - { get_param: ceph_osd_security_group }
+      user_data: |
+        #!/bin/sh -x
+
+        /bin/echo '#### Make eth0 the default gateway'
+
+        /bin/echo 'GATEWAYDEV=eth0' >> /etc/sysconfig/network
+
+        /bin/echo '#### Configure eth1'
+
+        /bin/cat > /etc/sysconfig/network-scripts/ifcfg-eth1 << EOF1
+        BOOTPROTO=dhcp
+        DEVICE=eth1
+        ONBOOT=yes
+        TYPE=Ethernet
+        USERCTL=no
+        EOF1
+
+        /bin/echo '#### Bring up eth1'
+
+        /etc/sysconfig/network-scripts/ifup eth1
+
+        /bin/echo '#### Configure eth2'
+
+        /bin/cat > /etc/sysconfig/network-scripts/ifcfg-eth2 << EOF2
+        BOOTPROTO=dhcp
+        DEVICE=eth2
+        ONBOOT=yes
+        TYPE=Ethernet
+        USERCTL=no
+        EOF2
+
+        /bin/echo '#### Bring up eth2'
+
+        /etc/sysconfig/network-scripts/ifup eth2
+
+  ceph_osd_volume:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: num_osd_volumes }
+      resource_def:
+        type: ceph_osd_volume.yaml
+        properties:
+          size: { get_param: osd_volume_size }
+          availability_zone: { get_param: availability_zone }
+          instance_uuid: { get_resource: ceph_osd_server }
+
+outputs:
+
+  ceph_osd_server_name:
+    description: Ceph osd server name
+    value: { get_attr: [ceph_osd_server, name] }
+
+  ceph_osd_management_address:
+    description: Ceph osd management address
+    value: { get_attr: [ceph_osd_server, first_address] }
