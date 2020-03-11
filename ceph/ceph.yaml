@@ -51,7 +51,7 @@ parameters:
   osd_flavor:
     type: string
     description: Ceph OSD server flavor
-    default: m1.large
+    default: m1.medium
 
   image_id:
     type: string
@@ -63,20 +63,15 @@ parameters:
     description: Name of the project's mangement network
     default: kcoakley_network
 
-  public_net_cidr:
+  ceph_net_cidr:
     type: string
     description: Public network address (CIDR notation)
-    default: 10.0.1.0/24
-
-  cluster_net_cidr:
-    type: string
-    description: Cluster network address (CIDR notation)
-    default: 10.0.2.0/24
+    default: 172.16.2.0/24
 
   dns_servers:
     type: comma_delimited_list
     description: DNS servers for Ceph networks
-    default: ["198.202.75.26", "132.249.20.25"]
+    default: ["8.8.8.8", "8.8.4.4"]
 
   availability_zone:
     type: string
@@ -85,36 +80,20 @@ parameters:
 
 resources:
 
-  public_net:
+  ceph_net:
     type: OS::Neutron::Net
     properties:
       name:
         str_replace:
-          template: prefix_public
+          template: prefix_ceph_net
           params:
             prefix: { get_param: server_name_prefix }
 
   public_subnet:
     type: OS::Neutron::Subnet
     properties:
-      network_id: { get_resource: public_net }
-      cidr: { get_param: public_net_cidr }
-      dns_nameservers: { get_param: dns_servers }
-
-  cluster_net:
-    type: OS::Neutron::Net
-    properties:
-      name:
-        str_replace:
-          template: prefix_cluster
-          params:
-            prefix: { get_param: server_name_prefix }
-
-  cluster_subnet:
-    type: OS::Neutron::Subnet
-    properties:
-      network_id: { get_resource: cluster_net }
-      cidr: { get_param: cluster_net_cidr }
+      network_id: { get_resource: ceph_net }
+      cidr: { get_param: ceph_net_cidr }
       dns_nameservers: { get_param: dns_servers }
 
   ssh_security_group:
@@ -179,7 +158,7 @@ resources:
           flavor: { get_param: mon_flavor }
           key_name: { get_param: key_name }
           management_net: { get_param: management_net }
-          public_net: { get_resource: public_net }
+          ceph_net: { get_resource: ceph_net }
           ssh_security_group: { get_resource: ssh_security_group }
           ceph_mon_security_group: { get_resource: ceph_mon_security_group }
           ceph_rgws_security_group: { get_resource: ceph_rgws_security_group }
@@ -197,8 +176,7 @@ resources:
           flavor: { get_param: osd_flavor }
           key_name: { get_param: key_name }
           management_net: { get_param: management_net }
-          public_net: { get_resource: public_net }
-          cluster_net: { get_resource: cluster_net }
+          ceph_net: { get_resource: ceph_net }
           ssh_security_group: { get_resource: ssh_security_group }
           ceph_osd_security_group: { get_resource: ceph_osd_security_group }
           num_osd_volumes: { get_param: num_osd_volumes }

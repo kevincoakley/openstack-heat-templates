@@ -26,9 +26,9 @@ parameters:
     type: string
     description: Name of the project's mangement network
 
-  public_net:
+  ceph_net:
     type: string
-    description: Name or ID of the Ceph public network
+    description: Name or ID of the Ceph network
 
   ssh_security_group:
     type: string
@@ -59,7 +59,7 @@ resources:
       key_name: { get_param: key_name }
       networks:
         - network: { get_param: management_net }
-        - network: { get_param: public_net }
+        - network: { get_param: ceph_net }
       security_groups:
         - { get_param: ssh_security_group }
         - { get_param: ceph_mon_security_group }
