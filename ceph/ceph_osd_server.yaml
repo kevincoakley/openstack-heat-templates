@@ -30,6 +30,10 @@ parameters:
     type: string
     description: Name or ID of the Ceph network
 
+  floating_ip_net:
+    type: string
+    description: Name of the external network
+
   ssh_security_group:
     type: string
     description: Name or ID of the SSH security group
@@ -50,6 +54,17 @@ parameters:
     type: string
     description: The availability zone used to create the resources
 
+  assign_floating_ips:
+    type: boolean
+    description: Assign floating ips to all servers
+    default: false
+
+conditions:
+
+  evaluate_floating_ips:
+    equals:
+      - get_param: assign_floating_ips
+      - true
 
 resources:
 
@@ -66,11 +81,8 @@ resources:
       flavor: { get_param: flavor }
       key_name: { get_param: key_name }
       networks:
-        - network: { get_param: management_net }
-        - network: { get_param: ceph_net }
-      security_groups:
-        - { get_param: ssh_security_group }
-        - { get_param: ceph_osd_security_group }
+        - port: { get_resource: ceph_osd_management_net_port }
+        - port: { get_resource: ceph_osd_ceph_net_port }
       user_data: |
         #!/bin/sh -x
 
@@ -92,6 +104,26 @@ resources:
 
         /etc/sysconfig/network-scripts/ifup eth1
 
+  ceph_osd_management_net_port:
+    type: OS::Neutron::Port
+    properties:
+      network_id: { get_param: management_net }
+      security_groups:
+        - { get_param: ssh_security_group }
+
+  ceph_osd_ceph_net_port:
+    type: OS::Neutron::Port
+    properties:
+      network_id: { get_param: ceph_net }
+      security_groups:
+        - { get_param: ceph_osd_security_group }
+
+  ceph_osd_floating_ip:
+    type: "OS::Neutron::FloatingIP"
+    condition: evaluate_floating_ips
+    properties:
+      floating_network: { get_param: floating_ip_net }
+      port_id: { get_resource: ceph_osd_management_net_port }
 
   ceph_osd_volume:
     type: OS::Heat::ResourceGroup
@@ -112,4 +144,4 @@ outputs:
 
   ceph_osd_management_address:
     description: Ceph osd management address
-    value: { get_attr: [ceph_osd_server, first_address] }
+    value: { if: [evaluate_floating_ips, { get_attr: [ ceph_osd_floating_ip, floating_ip_address ] }, { get_attr: [ceph_osd_server, first_address] }] }

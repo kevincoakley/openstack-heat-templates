@@ -63,6 +63,11 @@ parameters:
     description: Name of the project's mangement network
     default: kcoakley_network
 
+  floating_ip_net:
+    type: string
+    description: Name of the external network
+    default: ext-net
+
   ceph_net_cidr:
     type: string
     description: Ceph network address (CIDR notation)
@@ -77,6 +82,11 @@ parameters:
     type: string
     description: The availability zone used to create the resources
     default: West-Datacenter
+
+  assign_floating_ips:
+    type: boolean
+    description: Assign floating ips to all servers
+    default: false
 
 resources:
 
@@ -115,15 +125,19 @@ resources:
         - protocol: tcp
           port_range_min: 3300
           port_range_max: 3300
+          remote_ip_prefix: { get_param: ceph_net_cidr }
         - protocol: tcp
           port_range_min: 6789
           port_range_max: 6789
+          remote_ip_prefix: { get_param: ceph_net_cidr }
         - protocol: tcp
           port_range_min: 6800
           port_range_max: 6800
+          remote_ip_prefix: { get_param: ceph_net_cidr }
         - protocol: tcp
           port_range_min: 7000
           port_range_max: 7000
+          remote_ip_prefix: { get_param: ceph_net_cidr }
 
   ceph_osd_security_group:
     type: OS::Neutron::SecurityGroup
@@ -134,6 +148,7 @@ resources:
         - protocol: tcp
           port_range_min: 6800
           port_range_max: 7300
+          remote_ip_prefix: { get_param: ceph_net_cidr }
 
   ceph_rgws_security_group:
     type: OS::Neutron::SecurityGroup
@@ -159,9 +174,11 @@ resources:
           key_name: { get_param: key_name }
           management_net: { get_param: management_net }
           ceph_net: { get_resource: ceph_net }
+          floating_ip_net: { get_param: floating_ip_net }
           ssh_security_group: { get_resource: ssh_security_group }
           ceph_mon_security_group: { get_resource: ceph_mon_security_group }
           ceph_rgws_security_group: { get_resource: ceph_rgws_security_group }
+          assign_floating_ips: { get_param: assign_floating_ips }
 
   ceph_osd:
     type: OS::Heat::ResourceGroup
@@ -177,12 +194,13 @@ resources:
           key_name: { get_param: key_name }
           management_net: { get_param: management_net }
           ceph_net: { get_resource: ceph_net }
+          floating_ip_net: { get_param: floating_ip_net }
           ssh_security_group: { get_resource: ssh_security_group }
           ceph_osd_security_group: { get_resource: ceph_osd_security_group }
           num_osd_volumes: { get_param: num_osd_volumes }
           osd_volume_size: { get_param: osd_volume_size }
           availability_zone: { get_param: availability_zone }
-
+          assign_floating_ips: { get_param: assign_floating_ips }
 
 outputs:
 
