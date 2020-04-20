@@ -65,7 +65,7 @@ parameters:
 
   ceph_net_cidr:
     type: string
-    description: Public network address (CIDR notation)
+    description: Ceph network address (CIDR notation)
     default: 172.16.2.0/24
 
   dns_servers:
@@ -89,7 +89,7 @@ resources:
           params:
             prefix: { get_param: server_name_prefix }
 
-  public_subnet:
+  ceph_subnet:
     type: OS::Neutron::Subnet
     properties:
       network_id: { get_resource: ceph_net }
