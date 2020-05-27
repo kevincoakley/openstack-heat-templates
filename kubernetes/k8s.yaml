@@ -84,7 +84,7 @@ resources:
     type: OS::Neutron::SecurityGroup
     properties:
       name: k8s_security_group
-      description: For services ceph-mon, ceph-mgr and ceph-mgr dashboard
+      description: Allow all communication between all k8s nodes
       rules:
         - protocol: tcp
           port_range_min: 1
