@@ -56,7 +56,7 @@ parameters:
   image_id:
     type: string
     description: Name or ID of the image to use for the servers
-    default: CentOS 7.6 x86_64
+    default: CentOS 7.8 x86_64
 
   management_net:
     type: string
