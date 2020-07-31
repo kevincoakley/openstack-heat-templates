@@ -1,0 +1,34 @@
+# This is the default ansible 'hosts' file.
+#
+# It should live in /etc/ansible/hosts
+#
+#   - Comments begin with the '#' character
+#   - Blank lines are ignored
+#   - Groups of hosts are delimited by [header] elements
+#   - You can enter hostnames or ip addresses
+#   - A hostname/ip can be a member of multiple groups
+
+[mons]
+{% for key, value in mons.items() %}
+{{ key }} ansible_host={{ value }} ansible_port=22 ansible_user=centos ansible_become=yes ansible_become_method=sudo
+{% endfor %}
+
+[mgrs:children]
+mons
+
+[rgws:children]
+mons
+
+[osds]
+{% for key, value in osds.items() %}
+{{ key }} ansible_host={{ value }} ansible_port=22 ansible_user=centos ansible_become=yes ansible_become_method=sudo osd_crush_location="{ 'root': 'default', 'pod': 'pod-01', 'rack': 'rack-01', 'host': '{{ key }}' }"
+{% endfor %}
+
+[{{ site_id }}:children]
+mons
+mgrs
+osds
+mgrs
+
+[all-sites:children]
+{{ site_id }}

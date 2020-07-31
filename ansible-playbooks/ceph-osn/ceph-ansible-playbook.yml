@@ -1,0 +1,51 @@
+---
+- hosts:
+    - localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    stack_name: ceph
+    state: present
+    key_name: ansible
+    site_id: sdsc-dev
+    num_mons: 3
+    num_osds: 5
+    management_net: kcoakley_network
+    ceph_net_cidr: 172.16.2.0/24
+    inventory_dest: ceph-inventory
+
+  tasks:
+    - name: create stack
+      ignore_errors: True
+      register: stack_create
+      os_stack:
+        name: "{{ stack_name }}"
+        state: "{{ state }}"
+        template: "../../ceph/ceph.yaml"
+        parameters:
+          key_name: "{{ key_name }}"
+          num_mons: "{{ num_mons }}"
+          num_osds: "{{ num_osds }}"
+          management_net: "{{ management_net }}"
+          ceph_net_cidr: "{{ ceph_net_cidr }}"
+
+    - name: Set mon and osd facts
+      set_fact:
+         mon_ips: "{{ stack_create | json_query(\"stack.outputs[?output_key == 'ceph_mon_management_addresses'].output_value[]\") }}"
+         mon_names: "{{ stack_create | json_query(\"stack.outputs[?output_key == 'ceph_mon_server_names'].output_value[]\") }}"
+         osd_ips: "{{ stack_create | json_query(\"stack.outputs[?output_key == 'ceph_osd_management_addresses'].output_value[]\") }}"
+         osd_names: "{{ stack_create | json_query(\"stack.outputs[?output_key == 'ceph_osd_server_names'].output_value[]\") }}"
+      when: state == "present"
+
+    - name: Zip names and ips
+      set_fact:
+         mons: "{{ dict(mon_names | zip(mon_ips)) }}"
+         osds: "{{ dict(osd_names | zip(osd_ips)) }}"
+      when: state == "present"
+
+    - name: Create the ceph-ansible inventory for the stack
+      template:
+        src: ceph-inventory.j2
+        dest: "{{ inventory_dest }}"
+      when: state == "present"
