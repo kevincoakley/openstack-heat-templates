@@ -104,6 +104,8 @@ resources:
 
         /etc/sysconfig/network-scripts/ifup eth1
 
+        /usr/bin/systemctl restart network
+
   ceph_osd_management_net_port:
     type: OS::Neutron::Port
     properties:
