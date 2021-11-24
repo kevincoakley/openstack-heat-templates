@@ -5,9 +5,9 @@ description: >
 
 parameters:
 
-  num_masters:
+  num_control_plane:
     type: number
-    description: Number of Kubernetes master servers to create
+    description: Number of Kubernetes control-plane servers to create
     default: 1
     constraints:
       - range: { min: 1, max: 10 }
@@ -43,9 +43,9 @@ parameters:
     type: string
     description: Name of a KeyPair for SSH access to the server
 
-  master_flavor:
+  control_plane_flavor:
     type: string
-    description: Kubernetes master server flavor
+    description: Kubernetes control-plane server flavor
     default: m1.medium
 
   node_flavor:
@@ -96,17 +96,17 @@ resources:
           port_range_max: 65535
           remote_ip_prefix: 192.168.0.0/24
 
-  k8s_master:
+  k8s_control_plane:
     type: OS::Heat::ResourceGroup
     properties:
-      count: { get_param: num_masters }
+      count: { get_param: num_control_plane }
       resource_def:
-        type: k8s_master_server.yaml
+        type: k8s_control_plane_server.yaml
         properties:
           index: "%index%"
           server_name_prefix: { get_param: server_name_prefix }
           image_id: { get_param: image_id }
-          flavor: { get_param: master_flavor }
+          flavor: { get_param: control_plane_flavor }
           key_name: { get_param: key_name }
           management_net: { get_param: management_net }
           ssh_security_group: { get_resource: ssh_security_group }
@@ -134,13 +134,13 @@ resources:
 
 outputs:
 
-  k8s_master_server_names:
-    description: Kubernetes master server names
-    value: { get_attr: [k8s_master, k8s_master_server_name] }
+  k8s_control_plane_server_names:
+    description: Kubernetes control-plane server names
+    value: { get_attr: [k8s_control_plane, k8s_control_plane_server_name] }
 
-  k8s_master_management_addresses:
-    description: Kubernetes master management addresses
-    value: { get_attr: [k8s_master, k8s_master_management_address] }
+  k8s_control_plane_management_addresses:
+    description: Kubernetes control-plane management addresses
+    value: { get_attr: [k8s_control_plane, k8s_control_plane_management_address] }
 
   k8s_node_server_names:
     description: Kubernetes worker node server names

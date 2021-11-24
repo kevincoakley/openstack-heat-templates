@@ -36,7 +36,7 @@ parameters:
 
 resources:
 
-  k8s_master_server:
+  k8s_control_plane_server:
     type: OS::Nova::Server
     properties:
       name:
@@ -56,10 +56,10 @@ resources:
 
 outputs:
 
-  k8s_master_server_name:
-    description: Kubernetes master server name
-    value: { get_attr: [k8s_master_server, name] }
+  k8s_control_plane_server_name:
+    description: Kubernetes control-plane server name
+    value: { get_attr: [k8s_control_plane_server, name] }
 
-  k8s_master_management_address:
-    description: Kubernetes master management address
-    value: { get_attr: [k8s_master_server, first_address] }
+  k8s_control_plane_management_address:
+    description: Kubernetes control-plane management address
+    value: { get_attr: [k8s_control_plane_server, first_address] }
