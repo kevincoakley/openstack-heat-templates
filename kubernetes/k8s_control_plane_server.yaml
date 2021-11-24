@@ -41,7 +41,7 @@ resources:
     properties:
       name:
         str_replace:
-          template: prefix-master-index
+          template: prefix-cp-index
           params:
             prefix: { get_param: server_name_prefix }
             index: { get_param: index }
