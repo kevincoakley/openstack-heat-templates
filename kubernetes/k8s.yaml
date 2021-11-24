@@ -95,6 +95,10 @@ resources:
           port_range_min: 1
           port_range_max: 65535
           remote_ip_prefix: 192.168.0.0/24
+        - protocol: 4
+          direction: ingress
+        - protocol: 4
+          direction: egress
 
   k8s_control_plane:
     type: OS::Heat::ResourceGroup
