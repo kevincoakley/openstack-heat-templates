@@ -56,7 +56,7 @@ parameters:
   image_id:
     type: string
     description: Name or ID of the image to use for the servers
-    default: Ubuntu 18.04 LTS x86_64
+    default: Ubuntu 20.04 LTS x86_64
 
   management_net:
     type: string
