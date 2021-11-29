@@ -46,7 +46,7 @@ parameters:
   control_plane_flavor:
     type: string
     description: Kubernetes control-plane server flavor
-    default: m1.medium
+    default: m1.large
 
   node_flavor:
     type: string
