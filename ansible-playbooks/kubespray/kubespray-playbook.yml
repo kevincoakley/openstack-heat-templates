@@ -31,6 +31,7 @@
         state: "{{ state }}"
         template: "../../kubernetes/k8s.yaml"
         parameters:
+          server_name_prefix: "{{ server_name_prefix }}"
           key_name: "{{ key_name }}"
           num_control_plane: "{{ num_control_plane }}"
           num_nodes: "{{ num_nodes }}"
