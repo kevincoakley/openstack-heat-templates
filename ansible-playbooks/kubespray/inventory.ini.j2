@@ -1,0 +1,52 @@
+[local]
+localhost
+
+[local:vars]
+ansible_become=no
+
+[all]
+{% for key, value in all.items() %}
+{% if loop.index <= num_etcd %}
+{{ key }} ansible_host={{ value }} etcd_member_name=etcd{{ loop.index }}
+{% else %}
+{{ key }} ansible_host={{ value }}
+{% endif %}
+{% endfor %}
+
+[all:vars]
+ansible_user=ubuntu
+ansible_port=22
+ansible_become=yes
+ansible_become_method=sudo
+
+[kube_control_plane]
+{% for key, value in cps.items() %}
+{{ key }}
+{% endfor %}
+
+[etcd]
+{% for key, value in all.items() %}
+{% if loop.index <= num_etcd %}
+{{ key }}
+{% endif %}
+{% endfor %}
+
+[kube_node]
+{% for key, value in nodes.items() %}
+{{ key }}
+{% endfor %}
+
+[calico_rr]
+
+[k8s_cluster:children]
+kube_control_plane
+kube_node
+calico_rr
+
+[k8s_cluster:vars]
+cluster_id="1.0.0.1"
+
+[kubespray:children]
+kube_control_plane
+kube_node
+calico_rr

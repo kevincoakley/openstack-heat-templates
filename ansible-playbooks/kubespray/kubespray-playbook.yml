@@ -1,0 +1,62 @@
+---
+- hosts:
+    - localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    server_name_prefix: k8s
+    state: present
+    key_name: ansible
+    site_id: sdsc-dev
+    num_control_plane: 1
+    num_nodes: 3
+    num_etcd: 3
+    management_net: kcoakley_network
+    inventory_dest: ceph-inventory
+
+  tasks:
+    - name: create stack
+      ignore_errors: True
+      register: stack_create
+      os_stack:
+        auth:
+          auth_url: "{{ lookup('env','OS_AUTH_URL') }}"
+          username: "{{ lookup('env','OS_USERNAME') }}"
+          password: "{{ lookup('env','OS_PASSWORD') }}"
+          project_name: "{{ lookup('env','OS_PROJECT_NAME') }}"
+          os_user_domain_name: "{{ lookup('env','OS_USER_DOMAIN_NAME') }}"
+          os_project_domain_name: "{{ lookup('env','OS_PROJECT_DOMAIN_ID') }}"
+        name: "{{ server_name_prefix }}"
+        state: "{{ state }}"
+        template: "../../kubernetes/k8s.yaml"
+        parameters:
+          key_name: "{{ key_name }}"
+          num_control_plane: "{{ num_control_plane }}"
+          num_nodes: "{{ num_nodes }}"
+          management_net: "{{ management_net }}"
+
+    - name: Set control-plane and node facts
+      set_fact:
+         cp_ips: "{{ stack_create | json_query(\"stack.outputs[?output_key == 'k8s_control_plane_management_addresses'].output_value[]\") }}"
+         cp_names: "{{ stack_create | json_query(\"stack.outputs[?output_key == 'k8s_control_plane_server_names'].output_value[]\") }}"
+         node_ips: "{{ stack_create | json_query(\"stack.outputs[?output_key == 'k8s_node_management_addresses'].output_value[]\") }}"
+         node_names: "{{ stack_create | json_query(\"stack.outputs[?output_key == 'k8s_node_server_names'].output_value[]\") }}"
+      when: state == "present"
+
+    - name: Zip names and ips
+      set_fact:
+         cps: "{{ dict(cp_names | zip(cp_ips)) }}"
+         nodes: "{{ dict(node_names | zip(node_ips)) }}"
+      when: state == "present"
+
+    - name: Combine cps and nodes to open variable
+      set_fact:
+         all: "{{ cps|combine(nodes) }}"
+      when: state == "present"
+
+    - name: Create the kubespray inventory for the stack
+      template:
+        src: inventory.ini.j2
+        dest: "{{ inventory_dest }}"
+      when: state == "present"
