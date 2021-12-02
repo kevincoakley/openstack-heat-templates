@@ -13,6 +13,7 @@
     num_nodes: 3
     num_etcd: 3
     management_net: kcoakley_network
+    floating_net: ext-net
     inventory_dest: ceph-inventory
 
   tasks:
@@ -55,6 +56,34 @@
       set_fact:
          all: "{{ cps|combine(nodes) }}"
       when: state == "present"
+
+    - name: Gather information about networks
+      openstack.cloud.networks_info:
+        auth:
+          auth_url: "{{ lookup('env','OS_AUTH_URL') }}"
+          username: "{{ lookup('env','OS_USERNAME') }}"
+          password: "{{ lookup('env','OS_PASSWORD') }}"
+          project_name: "{{ lookup('env','OS_PROJECT_NAME') }}"
+          os_user_domain_name: "{{ lookup('env','OS_USER_DOMAIN_NAME') }}"
+          os_project_domain_name: "{{ lookup('env','OS_PROJECT_DOMAIN_ID') }}"
+      register: networks_info
+      when: state == "present"
+
+    - name: Set the management_net facts
+      set_fact:
+        lbaas_network_id: "{{ item.id }}"
+        lbaas_subnet_id: "{{ item.subnets[0] }}"
+      when: ( state == "present" ) and ( item.name == management_net )  
+      with_items: 
+        - "{{ networks_info.openstack_networks }}"
+
+    - name: Set the floating_net facts
+      set_fact:
+        lbaas_floating_network_id: "{{ item.id }}"
+        lbaas_floating_subnet_id: "{{ item.subnets[0] }}"
+      when: ( state == "present" ) and ( item.name == floating_net ) 
+      with_items: 
+        - "{{ networks_info.openstack_networks }}"
 
     - name: Create the kubespray inventory for the stack
       template:

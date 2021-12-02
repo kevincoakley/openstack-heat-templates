@@ -18,6 +18,10 @@ ansible_user=ubuntu
 ansible_port=22
 ansible_become=yes
 ansible_become_method=sudo
+external_openstack_lbaas_network_id={{ lbaas_network_id }}
+external_openstack_lbaas_subnet_id={{ lbaas_subnet_id }}
+external_openstack_lbaas_floating_network_id={{ lbaas_floating_network_id }}
+external_openstack_lbaas_floating_subnet_id={{ lbaas_floating_subnet_id }}
 
 [kube_control_plane]
 {% for key, value in cps.items() %}
