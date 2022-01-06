@@ -1,3 +1,4 @@
+---
 heat_template_version: queens
 
 parameters:
@@ -95,7 +96,7 @@ resources:
         /bin/echo '#### Bring up eth1'
 
         /etc/sysconfig/network-scripts/ifup eth1
-        
+
         /usr/bin/systemctl restart network
 
   ceph_mon_management_net_port:

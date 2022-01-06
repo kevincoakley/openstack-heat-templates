@@ -1,3 +1,4 @@
+---
 heat_template_version: rocky
 
 description: >
@@ -39,8 +40,8 @@ parameters:
     description: Size of the data volume in GB
     default: 20
     constraints:
-    - range: { min: 1, max: 1024 }
-      description: must be between 1 and 1024 GB
+      - range: { min: 1, max: 1024 }
+        description: must be between 1 and 1024 GB
 
   postgresql_major_version:
     type: string
@@ -55,9 +56,9 @@ resources:
       name: ssh_security_group
       description: Port 22 for SSH
       rules:
-      - protocol: tcp
-        port_range_min: 22
-        port_range_max: 22
+        - protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
 
   postgres_security_group:
     type: OS::Neutron::SecurityGroup
@@ -79,8 +80,8 @@ resources:
       networks:
         - network: { get_param: private_net }
       security_groups:
-      - { get_resource: ssh_security_group }
-      - { get_resource: postgres_security_group }
+        - { get_resource: ssh_security_group }
+        - { get_resource: postgres_security_group }
 
       user_data:
         str_replace:

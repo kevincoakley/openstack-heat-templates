@@ -1,3 +1,4 @@
+---
 heat_template_version: queens
 
 description: >
@@ -112,9 +113,9 @@ resources:
       name: ssh_security_group
       description: Port 22 for SSH
       rules:
-      - protocol: tcp
-        port_range_min: 22
-        port_range_max: 22
+        - protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
 
   ceph_mon_security_group:
     type: OS::Neutron::SecurityGroup

@@ -1,3 +1,4 @@
+---
 heat_template_version: queens
 
 parameters:

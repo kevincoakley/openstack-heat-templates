@@ -18,7 +18,7 @@
 
   tasks:
     - name: create stack
-      ignore_errors: True
+      ignore_errors: true
       register: stack_create
       os_stack:
         auth:
@@ -40,21 +40,21 @@
 
     - name: Set control-plane and node facts
       set_fact:
-         cp_ips: "{{ stack_create | json_query(\"stack.outputs[?output_key == 'k8s_control_plane_management_addresses'].output_value[]\") }}"
-         cp_names: "{{ stack_create | json_query(\"stack.outputs[?output_key == 'k8s_control_plane_server_names'].output_value[]\") }}"
-         node_ips: "{{ stack_create | json_query(\"stack.outputs[?output_key == 'k8s_node_management_addresses'].output_value[]\") }}"
-         node_names: "{{ stack_create | json_query(\"stack.outputs[?output_key == 'k8s_node_server_names'].output_value[]\") }}"
+        cp_ips: "{{ stack_create | json_query(\"stack.outputs[?output_key == 'k8s_control_plane_management_addresses'].output_value[]\") }}"
+        cp_names: "{{ stack_create | json_query(\"stack.outputs[?output_key == 'k8s_control_plane_server_names'].output_value[]\") }}"
+        node_ips: "{{ stack_create | json_query(\"stack.outputs[?output_key == 'k8s_node_management_addresses'].output_value[]\") }}"
+        node_names: "{{ stack_create | json_query(\"stack.outputs[?output_key == 'k8s_node_server_names'].output_value[]\") }}"
       when: state == "present"
 
     - name: Zip names and ips
       set_fact:
-         cps: "{{ dict(cp_names | zip(cp_ips)) }}"
-         nodes: "{{ dict(node_names | zip(node_ips)) }}"
+        cps: "{{ dict(cp_names | zip(cp_ips)) }}"
+        nodes: "{{ dict(node_names | zip(node_ips)) }}"
       when: state == "present"
 
     - name: Combine cps and nodes to open variable
       set_fact:
-         all: "{{ cps|combine(nodes) }}"
+        all: "{{ cps|combine(nodes) }}"
       when: state == "present"
 
     - name: Gather information about networks
@@ -73,16 +73,16 @@
       set_fact:
         lbaas_network_id: "{{ item.id }}"
         lbaas_subnet_id: "{{ item.subnets[0] }}"
-      when: ( state == "present" ) and ( item.name == management_net )  
-      with_items: 
+      when: ( state == "present" ) and ( item.name == management_net )
+      with_items:
         - "{{ networks_info.openstack_networks }}"
 
     - name: Set the floating_net facts
       set_fact:
         lbaas_floating_network_id: "{{ item.id }}"
         lbaas_floating_subnet_id: "{{ item.subnets[0] }}"
-      when: ( state == "present" ) and ( item.name == floating_net ) 
-      with_items: 
+      when: ( state == "present" ) and ( item.name == floating_net )
+      with_items:
         - "{{ networks_info.openstack_networks }}"
 
     - name: Create the kubespray inventory for the stack
