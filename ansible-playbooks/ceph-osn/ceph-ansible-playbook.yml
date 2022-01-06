@@ -55,4 +55,5 @@
       template:
         src: ceph-inventory.j2
         dest: "{{ inventory_dest }}"
+        mode: '0644'
       when: state == "present"

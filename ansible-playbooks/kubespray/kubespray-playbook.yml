@@ -89,4 +89,5 @@
       template:
         src: inventory.ini.j2
         dest: "{{ inventory_dest }}"
+        mode: '0644'
       when: state == "present"
