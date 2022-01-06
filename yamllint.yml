@@ -1,0 +1,17 @@
+---
+extends: default
+# Don't run yamllint on roles developed by 3rd parties
+ignore: |
+  /external/
+rules:
+  braces:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+  brackets:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+  line-length: disable
+  truthy:
+    ignore: |
+      .github/workflows/
+      /roles/*/.github/workflows/
