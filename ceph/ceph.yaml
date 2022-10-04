@@ -11,14 +11,14 @@ parameters:
     description: Number of Ceph monitor servers to create
     default: 3
     constraints:
-      - range: { min: 1, max: 10 }
+      - range: { min: 0, max: 10 }
 
   num_osds:
     type: number
     description: Number of Ceph OSD servers to create
     default: 3
     constraints:
-      - range: { min: 1, max: 20 }
+      - range: { min: 0, max: 20 }
 
   num_osd_volumes:
     type: number
